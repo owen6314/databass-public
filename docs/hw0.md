@@ -10,9 +10,9 @@ layout: page
 ## Overview:
 
 The goal of this homework is to get you familar with DataBass and muck around in parts of the codebase.
-Take a look at the [README](../) in this repo to get an overview of the system and how to set it up.
-We have written a short description of the [system design](./docs/design.md). 
-Then read these instructions. If you get need any help, [please reach us on Piazza](XXXXX).
+Take a look at the [README](../README.md) in this repo to get an overview of the system and how to set it up.
+We have written a short description of the [system design](./design.md). 
+Then read these instructions. If you get need any help, [please reach us on](ham2156@columbia.edu).
 
 ## Background
 
