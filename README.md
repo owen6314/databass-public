@@ -14,7 +14,7 @@ This is a simple Python-based analytical database for instructional purposes.  S
 
 Installation
 
-    git clone git@github.com:w6111/databass-public.git
+    git clone git@github.com:w6113/databass-public.git
 
     # turn on virtualenv
 
@@ -30,7 +30,7 @@ If you are a Columbia student and [have a clic account](https://www.cs.columbia.
     mkvirtualenv test
     workon test
 
-    git clone git@github.com:w6111/databass-public.git
+    git clone git@github.com:w6113/databass-public.git
     pip install click pandas numpy parsimonious readline nose
 
 
