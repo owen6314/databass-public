@@ -8,7 +8,7 @@ Database is a reasonably featured, but simple, in-memory read-only row-wise data
 
 The purpose is to provide students an overview of how the main parts of a data query engine work together and introduce database concepts within the context of an end-to-end engine.  Thus, the engine does not support many things, such as insert/update/delete queries, transactions, recovery, memory-management, correct null value support, etc.
 
-The engine is composed of the modules defined in Python files in the [src/engine/](../src/engine) folder:
+The engine is composed of the modules defined in Python files in the [databass/](../databass/) folder:
 
 Basic files:
 
