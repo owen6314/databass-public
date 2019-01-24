@@ -2,7 +2,7 @@ import click
 import subprocess
 import shutil
 
-assignments = ['aa%s' % i for i in range(0,4)]
+assignments = ['hw%s' % i for i in range(0,4)]
 digits = "1234567890"
 check_bad_uni = lambda uni: uni is None or any(c not in digits for c in uni[-4:])
 

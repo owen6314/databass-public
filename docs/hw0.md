@@ -78,5 +78,6 @@ Test your code by running:
 ### Submission
 
 Use the submit.py script to package your code. Run it from inside the main databass folder.
+The assignment prefix is hw0.
 
 Check the file to make sure no extra files were added.
