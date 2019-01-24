@@ -81,3 +81,5 @@ Use the submit.py script to package your code. Run it from inside the main datab
 The assignment prefix is hw0.
 
 Check the file to make sure no extra files were added.
+
+Finaly, submit the file through this [link](https://www.dropbox.com/request/1LyaKG5BbALxc9p2RrOX).
