@@ -5,7 +5,7 @@ layout: page
 # HW0 Expression Evaluation
 
 * Released: 1/23 12PM
-* Due: 1/27 12PM**
+* Due: 1/27 11:59PM**
 
 ## Overview:
 
@@ -78,8 +78,14 @@ Test your code by running:
 ### Submission
 
 Use the submit.py script to package your code. Run it from inside the main databass folder.
+When prompted, give your UNI first, then your partner's.
+If you did not work with a partner, put NONE in all caps.
+
 The assignment prefix is hw0.
 
 Check the file to make sure no extra files were added.
 
-Finaly, submit the file through this [link](https://www.dropbox.com/request/1LyaKG5BbALxc9p2RrOX).
+No points will be awarded to you if only your partner submits to Courseworks and
+you do not.
+
+
