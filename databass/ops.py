@@ -68,7 +68,9 @@ class Scan(Source):
     return self.schema
 
   def __iter__(self):
+    # initialize a single intermediate tuple
     irow = ListTuple(self.schema, [])
+
     for row in Database.db()[self.tablename]:
       irow.row = row.row
       yield irow
@@ -144,8 +146,17 @@ class ThetaJoin(Join):
     self.v_rrow = None  # variable to contain right row
 
   def __iter__(self):
-    # TODO: IMPLEMENT THIS
-    raise Exception("Not implemented")
+    # initialize a single intermediate tuple
+    irow = ListTuple(self.schema, [])
+
+    for lrow in self.l:
+      for rrow in self.r:
+        # populate intermediate tuple with values
+        irow.row[:len(lrow.row)] = lrow.row
+        irow.row[len(lrow.row):] = rrow.row
+
+        if self.cond(irow):
+          yield irow
 
   def produce(self, ctx):
     """
@@ -229,6 +240,9 @@ class HashJoin(Join):
     
     Yields each join result
     """
+    # initialize intermediate row to populate and pass to parent operators
+    irow = ListTuple(self.schema)
+
     # TODO: IMPLEMENT THIS
     raise Exception("Not implemented")
 
@@ -307,7 +321,10 @@ class GroupBy(UnaryOp):
     #    ..
     #    GROUP BY a * b
     #
-    # The values of a, b will be held in compiler var self.v_attrvals below
+    # self.group_attrs contains the Attr expressions for a, b
+    # 
+    # During execution, the values of a, b will be held in compiler 
+    # var self.v_attrvals below
     #
     self.group_attrs = []
 
@@ -325,12 +342,48 @@ class GroupBy(UnaryOp):
   def init_schema(self):
     """
     Find and copy attributes referenced in the group expressions to the output schema. 
+
+    The output schema should contain (in the following order):
+
+    * the attributes (Attr expressions) referenced in the grouping expressions
+    * a special __key__ attribute that contains a string representation of the
+      group's key
+    * a special __group__ attribute that contains a list of tuples in the group.
+      Note that this Attr's group_schema should be set to the input relation's
+      schema
+
+    For instance, if the query is:
+
+        SELECT a-b, count(c)
+        FROM data
+        GROUP BY a+b
+
+    The output schema should be:
+
+        (a, b, __key__, __group__)
     """
     # TODO: IMPLEMENT THIS
     self.schema = Schema([])
     return self.schema
 
   def __iter__(self):
+    """
+    GroupBy works as follows:
+    
+    * Contruct and populate hash table 
+      * key is defined by the group_exprs expressions  
+      * Track the values of the attributes referenced in the grouping expressions
+      * Track the tuples in each bucket
+    * Iterate through each bucket, compose and populate a tuple that conforms to 
+      this operator's output schema (see self.init_schema)
+    """
+
+    hashtable = defaultdict(lambda: [None, None, []])
+
+    # This initializes the intermediate row that you will populate and pass 
+    # to parent operators
+    irow = ListTuple(self.schema, [])
+
     # TODO: IMPLEMENT THIS
     raise Exception("Not implemented")
 
@@ -384,24 +437,70 @@ class Project(UnaryOp):
     """
     Provide generic attr1 style names for unaliased expressions.
     """
-    # TODO: IMPLEMENT THIS
-    pass
+    for i, expr in enumerate(self.exprs):
+      if i >= len(self.aliases):
+        self.aliases.append(None)
+      alias = self.aliases[i]
+      if not alias:
+        if isinstance(expr, Star): 
+          continue
+        if isinstance(expr, Attr):
+          self.aliases[i] = expr.aname
+        else:
+          self.aliases[i] = "attr%s" % i
 
   def expand_stars(self):
     """
     Updates self.exprs and self.aliases to replace instances of * with all attributes
     from child schema.  Alias should simply be the Attr's name.
+
+    For instance, assume data(a,b,c).  Then the following query:
+
+            SELECT a, b, * FROM data
+
+    Should be expanded into
+
+            SELECT a, b, a, b, c FROM data
+
+    And thus self.exprs should contain
+        
+            [Attr(a), Attr(b), Attr(a), Attr(b), Attr(c)]
+
+    And self.aliases should contain
+
+            ["a", "b", "a", "b", "c"]
+
+    Note that if a parent operator references "a", the reference will be caught
+    as ambiguous by Optimizer.disambiguate_attrs().
+
     """
+    if not self.c:
+      if self.collect(Star):
+        raise Exception("Cannot use * when Project has no source relations.")
+      return
+
+    newexprs = []
+    newaliases = []
+
     # TODO: IMPLEMENT THIS
-    pass
+    self.exprs = newexprs
+    self.aliases = newaliases
 
   def init_schema(self):
     # TODO: IMPLEMENT THIS
+    self.set_default_aliases()
+    # XXX: Uncomment the following line of code after you complete expand_stars()
+    # self.expand_stars()
     self.schema = Schema([])
     return self.schema
 
   def __iter__(self):
+    child_iter = self.c
+    # initialize single intermediate tuple to populate and pass to parent
+    irow = ListTuple(self.schema, [])
+
     # TODO: IMPLEMENT THIS
+    # if the query doesn't have a FROM clause (SELECT 1), pass up an empty tuple
     raise Exception("Not implemented")
 
   def produce(self, ctx):
@@ -469,6 +568,12 @@ class OrderBy(UnaryOp):
         raise Exception("OrderBy: does not support DESC")
 
   def __iter__(self):
+    """
+    OrderBy is a blocking operator that needs to accumulate all of its child
+    operator's outputs before sorting by the order expressions.
+
+    Note: each row from the child operator may be the _same_ ListTuple
+    """
     # TODO: IMPLEMENT THIS
     raise Exception("Not implemented")
 
@@ -539,6 +644,10 @@ class Limit(UnaryOp):
 
 
   def __iter__(self):
+    """
+    LIMIT should skip <offset> number of rows, and yield at most <limit>
+    number of rows
+    """
     # TODO: IMPLEMENT THIS
     raise Exception("Not implemented")
 
@@ -555,6 +664,9 @@ class Limit(UnaryOp):
 
 class Distinct(UnaryOp):
   def __iter__(self):
+    """
+    It is OK to use hash(row) to check for equivalence between rows
+    """
     # TODO: IMPLEMENT THIS
     raise Exception("Not implemented")
 
