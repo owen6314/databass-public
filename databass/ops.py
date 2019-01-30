@@ -244,6 +244,8 @@ class HashJoin(Join):
     irow = ListTuple(self.schema)
 
     # TODO: IMPLEMENT THIS
+    # XXX: Uncomment the following line of code after you complete the function.
+    # index = self.build_hash_index(self.r, ridx)
     raise Exception("Not implemented")
 
   def build_hash_index(self, child_iter, idx):
@@ -254,8 +256,11 @@ class HashJoin(Join):
     Loops through a tuple iterator and creates an index based on
     the attr value
     """
+    # defaultdict will initialize a hash entry to a new list if
+    # the entry is not found
+    index = defaultdict(list)
     # TODO: IMPLEMENT THIS
-    pass
+    return index
 
   def produce(self, ctx):
     """

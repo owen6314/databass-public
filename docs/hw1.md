@@ -94,6 +94,4 @@ The assignment prefix is `hw1`.
 
 Check the zip file to make sure no extra files were added.
 
-No points will be awarded to you if only your partner submits to Courseworks and
-you do not.
-
+Finaly, submit the file through this [link](https://www.dropbox.com/request/SIScpRdZkWmtkRdvQHeI).
