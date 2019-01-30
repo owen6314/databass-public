@@ -19,7 +19,10 @@ def unary(op, v):
   """
   if op == "+":
     return v
-  # TODO: Edit the code to support the unary operations "-", and "not",
+  if op == "-":
+    return -v
+  if op.lower() == "not":
+    return not(v)
   raise Exception("unary op not implemented")
 
 def binary(op, l, r):
@@ -35,8 +38,11 @@ def binary(op, l, r):
   if op == "or": return l or r
   if op == "<": return l < r
   if op == ">": return l > r
-  # TODO: Edit the code to support the binary operations "/",
-  #       "and", ">=", "<=", and "==".
+  if op == "/": return l / r
+  if op == "and": return l and r
+  if op == "==": return l == r
+  if op == "<=": return l <= r
+  if op == ">=": return l >= r
   raise Exception("binary op not implemented")
 
 class ExprBase(Op):
@@ -113,10 +119,26 @@ class Expr(ExprBase):
         v_out = v_l + v_r
 
     """
-    # TODO: (hw0 part b) complete this to turn the expression into a single
-    #       python string that can be evaluated. The compiled string assumes
-    #       that there is an io variables within the scope to write the results into.
-    pass
+    v_in, v_out = ctx.pop_io_vars()
+    v_l = ctx.new_var("expr")
+    v_r = ctx.new_var("expr")
+    op = self.op
+    if op == "=":
+      op = "=="
+
+    # evaluate subexpressions
+    ctx.add_io_vars(v_in, v_l)
+    self.l.compile(ctx)
+    if self.r:
+      ctx.add_io_vars(v_in, v_r)
+      self.r.compile(ctx)
+
+    # write expression result to output variable
+    if self.r:
+      line = "%s = (%s) %s (%s)" % (v_out, v_l, op, v_r)
+    else:
+      line = "%s = %s(%s)" % (v_out, self.op, v_l)
+    ctx.add_line(line)
 
   def __call__(self, row):
     l = self.l(row)
