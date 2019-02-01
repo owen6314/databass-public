@@ -366,6 +366,8 @@ class GroupBy(UnaryOp):
     The output schema should be:
 
         (a, b, __key__, __group__)
+
+    The values of a, b can be set to those of the LAST tuple added to the group.
     """
     # TODO: IMPLEMENT THIS
     self.schema = Schema([])
