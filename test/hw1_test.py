@@ -125,7 +125,7 @@ class TestUnits(unittest.TestCase):
   def check_schema(self, schema1, schema2):
     for i, attr in enumerate(schema1.attrs):
       self.assertEqual(attr.aname, schema2.attrs[i].aname)
-      self.assertEqual(attr.typ, schema2.attrs[i].typ)
+      self.assertEqual(attr.get_type(), schema2.attrs[i].get_type())
 
   def test_project_init_schema(self):
     """
