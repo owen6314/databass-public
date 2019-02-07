@@ -170,10 +170,12 @@ class ThetaJoin(Join):
 
   def consume(self, ctx):
     """
-    Consume will be called twice, once by the left child's
-    consume phase, and once by the right childe's consume phase.
+    Consume will be called twice, 
+    * first by the left child's consume phase, 
+    * second by the right child's consume phase.
 
-    Need to internally keep track of which time it is being called
+    It will help to keep state to know which time this 
+    function is being called, so that you run the correct logic
     """
     # TODO: IMPLEMENT THIS
     raise Exception("Not implemented")
@@ -512,15 +514,24 @@ class Project(UnaryOp):
 
   def produce(self, ctx):
     """
-    Setup output tuple.  
-    Special case if there is no child operator: should send an empty tuple 
-    with appropriate schema but all null values to parent's consume.
+    Setup output tuple variable and generate code to initialize it 
+    as an empty tuple with the correct schema..  
+
+    There is a special case when if there is no child operator, such as
+    
+            SELECT 1
+            
+    where produce should pretend it is an access method that emits a 
+    single empty tuple to its own consume method.
     """
     # TODO: IMPLEMENT THIS
     raise Exception("Not implemented")
 
   def consume(self, ctx):
     # TODO: IMPLEMENT THIS
+    # In the consume method, you can use the `self.compile_exprs()`
+    # method defined in `baseops.py` to execute an array of expressions
+    # and retrive the temporary values their results are stored in.
     raise Exception("Not implemented")
 
   def __str__(self):
