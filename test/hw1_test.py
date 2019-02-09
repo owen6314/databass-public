@@ -138,10 +138,8 @@ class TestUnits(unittest.TestCase):
             ['x'])
     # initialize operators' schema recursively
     self.opt.initialize_plan(proj)
-    self.opt.disambiguate_attrs(proj)
     print "Evaluate:\n%s" %(proj.pretty_print())
-    
-    schema = Schema([Attr("x", "num"), Attr("a", "?")])
+    schema = Schema([Attr("x", "num"), Attr("a", "num")])
     self.check_schema(schema, proj.schema)
 
     aliases_res = ['x', 'a']
@@ -151,7 +149,6 @@ class TestUnits(unittest.TestCase):
     scan = Scan('data', 'd1')
     proj = Project(scan, [Star()])
     self.opt.initialize_plan(proj)
-    self.opt.disambiguate_attrs(proj)
     print "Evaluate:\n%s" %(proj.pretty_print())
     schema = Schema([
       Attr("a", "num"),
@@ -212,7 +209,6 @@ class TestUnits(unittest.TestCase):
     q = SubQuerySource(proj, 'd2')
     # initialize operators' schema recursively
     self.opt.initialize_plan(q)
-    self.opt.disambiguate_attrs(q)
     print "Evaluate:\n%s" %(q.pretty_print())
     res = self.eval_query_plan(q)
 
@@ -228,7 +224,6 @@ class TestUnits(unittest.TestCase):
 
     # initialize operators' schema recursively
     self.opt.initialize_plan(q)
-    self.opt.disambiguate_attrs(q)
     print "Evaluate:\n%s" %(q.pretty_print())
     res = self.eval_query_plan(q)
     self.check_results(q_res, res)
@@ -237,7 +232,6 @@ class TestUnits(unittest.TestCase):
     gby = GroupBy(Scan("data", "d"), map(cond_to_func, ["c"]))
     q = Project(gby, map(cond_to_func, ["c+2", "sum(f)", "count(a)"]))
     self.opt.initialize_plan(q)
-    self.opt.disambiguate_attrs(q)
 
     q_res = ['(2.0, 200, 10)', '(3.0, 220, 10)']
 

@@ -25,7 +25,6 @@ class Optimizer(object):
     if not op: return None
 
     self.initialize_plan(op)
-    self.disambiguate_attrs(op)
 
     # If there's a From operator in the tree, 
     # then replace with join tree
@@ -33,21 +32,9 @@ class Optimizer(object):
       op = self.expand_from_op(op)
 
     self.initialize_plan(op)
-    self.disambiguate_attrs(op)
     return op
 
-  def initialize_plan(self, op):
-    """
-    Traverse bottom up from Scan operators and initialize operator schemas
-
-    This method should be idempotent: running it again should result in the same
-    schemas
-    """
-    # clear all schemas
-    for cop in op.collect(Op):
-      if cop.is_type(ExprBase): continue
-      cop.schema = None
-
+  def bottomup_pop(self, op):
     leaves = []
     def f(cur, path):
       if cur.is_type(ExprBase): return False
@@ -56,6 +43,7 @@ class Optimizer(object):
     op.traverse(f)
 
     queue = leaves
+    seen = set()
     niters = 0
     while queue:
       niters += 1
@@ -64,13 +52,38 @@ class Optimizer(object):
 
       op = queue.pop(0)
       # wait until op's children are all initialized
-      if not all(c.schema for c in op.children()):
+      if not all((c in seen) for c in op.children()):
         queue.append(op)
         continue
 
-      op.init_schema()
+      seen.add(op)
+      yield op
+
       if op.p:
         queue.append(op.p)
+
+  def initialize_plan(self, op):
+    """
+    Traverse bottom up from Scan operators and initialize operator schemas
+
+    First it go through each operator bottom up and disambiguate the table and types
+    for its attribute references.  Each Attr in the query plan should know which
+    operator will provide its attribute value.
+
+    This method should be idempotent: running it again should result in the same
+    schemas
+    """
+    root = op
+    # clear all schemas
+    for cop in op.collect(Op):
+      if cop.is_type(ExprBase): continue
+      cop.schema = None
+
+    for o in self.bottomup_pop(op):
+      o.init_schema()
+      self.disambiguate_op_attrs(o)
+      o.init_schema()
+    self.verify_attr_refs(root)
 
   def attrs_from_nonsource_op(self, op):
     """
@@ -159,21 +172,6 @@ class Optimizer(object):
       attr.idx = mattrs[0]['idx']
       if is_agg:
         attr.gidx = mattrs[0]['gidx']
-
-  def disambiguate_attrs(self, root):
-    """
-    Go through each operator and disambiguate the table and types
-    for its attribute references.  Each Attr in the query plan
-    should know which operator will provide its attribute value.
-
-    This method should be idempotent, 
-    and should be run after initializing operator schemas
-    """
-    ops = root.collect(Op)
-    for i, op in enumerate(ops):
-      if op.is_type(Source): continue
-      self.disambiguate_op_attrs(op)
-    self.verify_attr_refs(root)
 
   def verify_attr_refs(self, root):
     # Verify that all attributes are bound
