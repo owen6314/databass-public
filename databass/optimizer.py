@@ -168,7 +168,7 @@ class Optimizer(object):
         raise Exception(msg)
 
       attr.tablename = mattr.tablename
-      attr.typ = mattr.typ
+      attr.typ = mattr.get_type()
       attr.idx = mattrs[0]['idx']
       if is_agg:
         attr.gidx = mattrs[0]['gidx']

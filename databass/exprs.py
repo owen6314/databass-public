@@ -473,7 +473,7 @@ class Attr(ExprBase):
 
   def __str__(self):
     s = ".".join(filter(bool, [self.tablename, self.aname]))
-    return s
+    #return s
     return ":".join(filter(bool, [s, self.typ]))
 
 

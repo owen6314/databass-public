@@ -34,7 +34,8 @@ class Op(object):
     self.schema = None
 
   def __hash__(self):
-    return hash(str(self))
+    return self.id
+    #return hash(str(self))
 
   def __eq__(self, o):
     return o and hash(self) == hash(o)
