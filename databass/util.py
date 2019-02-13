@@ -50,4 +50,21 @@ def print_qplan_pointers(q):
       print "\t%d\t->\t%d" % (op.id, cop.id)
     queue.extend(op.children())
 
+class OBTuple(object):
+  '''
+  Function to order tuples based on asc or desc order
+  '''
+  def __init__(self, vals, ascdesc):
+    self.vals = vals
+    self.ascdesc = ascdesc
 
+  def __cmp__(self, other):
+    for reverse, v1, v2 in zip(self.ascdesc, self.vals, other.vals):
+      if v1 < v2:
+        return -1 * reverse
+      elif v1 > v2:
+        return 1 * reverse
+      else: # v1 == v2
+        continue
+
+    return 0

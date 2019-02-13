@@ -45,7 +45,7 @@ class TestUnits(unittest.TestCase):
 '''
 %s
 '''
-
+from database import *
 %s
     """ % (q.pretty_print(), code)
     print code_w_comments

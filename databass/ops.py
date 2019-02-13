@@ -6,7 +6,7 @@ from exprs import *
 from db import Database
 from schema import *
 from tuples import *
-from util import cache
+from util import cache, OBTuple
 from itertools import chain
 
 
@@ -30,16 +30,16 @@ class SubQuerySource(Source):
     self.alias = alias 
 
   def __iter__(self):
-    # TODO: IMPLEMENT THIS
-    raise Exception("Not implemented")
+    for row in self.c:
+      yield row
 
   def init_schema(self):
     """
     A source operator's schema should be initialized with the same 
     tablename as the operator's alias
     """
-    # TODO: IMPLEMENT THIS
-    self.schema = Schema([])
+    self.schema = self.c.schema.copy()
+    self.schema.set_tablename(self.alias)
     return self.schema
 
   def produce(self, ctx):
@@ -245,10 +245,23 @@ class HashJoin(Join):
     # initialize intermediate row to populate and pass to parent operators
     irow = ListTuple(self.schema)
 
-    # TODO: IMPLEMENT THIS
-    # XXX: Uncomment the following line of code after you complete the function.
-    # index = self.build_hash_index(self.r, ridx)
-    raise Exception("Not implemented")
+    # Hash join is equality on left_attr and right_attr    
+    lidx = self.join_attrs[0].idx
+    ridx = self.join_attrs[1].idx
+    index = self.build_hash_index(self.r, ridx)
+
+
+    for lrow in self.l:
+      # probe the hash index
+      lval = lrow[lidx]
+      key = hash(lval)
+      matches = index[key]
+
+      # generate outputs for all matching tuples
+      irow.row[:len(lrow.row)] = lrow.row
+      for rrow in matches:
+        irow.row[len(lrow.row):] = rrow.row
+        yield irow
 
   def build_hash_index(self, child_iter, idx):
     """
@@ -261,7 +274,10 @@ class HashJoin(Join):
     # defaultdict will initialize a hash entry to a new list if
     # the entry is not found
     index = defaultdict(list)
-    # TODO: IMPLEMENT THIS
+    for row in child_iter:
+      val = row[idx]
+      key = hash(val)
+      index[key].append(row.copy())
     return index
 
   def produce(self, ctx):
@@ -371,8 +387,27 @@ class GroupBy(UnaryOp):
 
     The values of a, b can be set to those of the LAST tuple added to the group.
     """
-    # TODO: IMPLEMENT THIS
+    self.group_attrs = []
     self.schema = Schema([])
+    seen = set()
+
+    # This block copies unique Attr references from the groupby expressions
+    # and tries to populate them using the child operator's schema
+    for expr in self.group_exprs:
+      for attr in expr.collect(Attr):
+        attr = attr.copy()
+        key = (attr.tablename, attr.aname)
+        if key in seen: 
+          continue
+        seen.add(key)
+        self.schema.attrs.append(attr)
+
+        # Keep copy of this Attr to compute it during query execution/compilation
+        self.group_attrs.append(attr.copy())
+
+    child_schema = self.c.schema.copy()
+    self.schema.attrs.append(Attr("__key__", "str"))
+    self.schema.attrs.append(Attr("__group__", group_schema=child_schema))
     return self.schema
 
   def __iter__(self):
@@ -393,8 +428,19 @@ class GroupBy(UnaryOp):
     # to parent operators
     irow = ListTuple(self.schema, [])
 
-    # TODO: IMPLEMENT THIS
-    raise Exception("Not implemented")
+
+    for row in self.c:
+      attrvals = [attr(row) for attr in self.group_attrs]
+      key = hash(tuple([e(row) for e in self.group_exprs]))
+      hashtable[key][0] = key
+      hashtable[key][1] = attrvals
+      hashtable[key][2].append(row.copy())
+
+    for _, (key, attrvals, group) in hashtable.items():
+      irow.row[:len(attrvals)] = attrvals
+      irow.row[-2] = key
+      irow.row[-1] = group
+      yield irow
 
   def produce(self, ctx):
     """
@@ -491,16 +537,26 @@ class Project(UnaryOp):
     newexprs = []
     newaliases = []
 
-    # TODO: IMPLEMENT THIS
+    cschema = self.c.schema
+    for i, (e, alias) in enumerate(zip(self.exprs, self.aliases)):
+      if e.is_type(Star):
+        _attrs = cschema.copy().attrs
+        _aliases = [a.aname for a in _attrs]
+        newexprs.extend(_attrs)
+        newaliases.extend(_aliases)
+      else:
+        newexprs.append(e)
+        newaliases.append(alias)
     self.exprs = newexprs
     self.aliases = newaliases
 
   def init_schema(self):
-    # TODO: IMPLEMENT THIS
     self.set_default_aliases()
-    # XXX: Uncomment the following line of code after you complete expand_stars()
-    # self.expand_stars()
+    self.expand_stars()
     self.schema = Schema([])
+    for alias, expr in zip(self.aliases, self.exprs):
+      typ = expr.get_type()
+      self.schema.attrs.append(Attr(alias, typ))
     return self.schema
 
   def __iter__(self):
@@ -508,9 +564,15 @@ class Project(UnaryOp):
     # initialize single intermediate tuple to populate and pass to parent
     irow = ListTuple(self.schema, [])
 
-    # TODO: IMPLEMENT THIS
+
     # if the query doesn't have a FROM clause (SELECT 1), pass up an empty tuple
-    raise Exception("Not implemented")
+    if self.c == None:
+      child_iter = [dict()]
+
+    for row in child_iter:
+      for i, (exp) in enumerate(self.exprs):
+        irow.row[i] = exp(row)
+      yield irow
 
   def produce(self, ctx):
     """
@@ -592,8 +654,16 @@ class OrderBy(UnaryOp):
 
     Note: each row from the child operator may be the _same_ ListTuple
     """
-    # TODO: IMPLEMENT THIS
-    raise Exception("Not implemented")
+    order = [1 if x == "asc" else -1 for x in self.ascdescs]
+
+    def keyf(row):
+      vals = tuple(expr(row) for expr in self.order_exprs)
+      return OBTuple(vals, order)
+
+    rows = [row.copy() for row in self.c]
+    rows.sort(key=keyf)
+    for row in rows:
+      yield row
 
   def produce(self, ctx):
     # TODO: IMPLEMENT THIS
@@ -666,8 +736,14 @@ class Limit(UnaryOp):
     LIMIT should skip <offset> number of rows, and yield at most <limit>
     number of rows
     """
-    # TODO: IMPLEMENT THIS
-    raise Exception("Not implemented")
+    nyielded = 0
+    for i, row in enumerate(self.c):
+      if i < self._offset: 
+        continue
+      if nyielded >= self._limit:
+        break
+      nyielded += 1
+      yield row
 
   def produce(self, ctx):
     # TODO: IMPLEMENT THIS
@@ -685,8 +761,14 @@ class Distinct(UnaryOp):
     """
     It is OK to use hash(row) to check for equivalence between rows
     """
-    # TODO: IMPLEMENT THIS
-    raise Exception("Not implemented")
+    seen = set()
+    for row in self.c:
+      key = hash(row)
+      if key in seen: 
+        continue
+
+      yield row
+      seen.add(key)
 
   def produce(self, ctx):
     self.v_seen = ctx.new_var("distinct_seen")
