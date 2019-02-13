@@ -644,9 +644,6 @@ class OrderBy(UnaryOp):
       if self.ascdescs[i] is None:
         self.ascdescs[i] = "asc"
 
-      if self.ascdescs[i] == "desc":
-        raise Exception("OrderBy: does not support DESC")
-
   def __iter__(self):
     """
     OrderBy is a blocking operator that needs to accumulate all of its child
