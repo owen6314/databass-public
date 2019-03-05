@@ -165,8 +165,15 @@ class ThetaJoin(Join):
     2. allocate a variable and Tuple for the intermediate row
     3. call produce on left child
     """
-    # TODO: IMPLEMENT THIS
-    raise Exception("Not implemented")
+    # ask child operator to set "row" to variable name that will hold left row
+    ctx.request_vars(dict(row=None))
+
+    # intermediate row
+    self.v_irow = ctx.new_var("theta_row")
+    line = "%s = ListTuple(%s)" % (self.v_irow, 
+        self.schema.compile_constructor())
+    ctx.add_line(line)
+    self.l.produce(ctx)
 
   def consume(self, ctx):
     """
@@ -177,8 +184,12 @@ class ThetaJoin(Join):
     It will help to keep state to know which time this 
     function is being called, so that you run the correct logic
     """
-    # TODO: IMPLEMENT THIS
-    raise Exception("Not implemented")
+    if self.state == 0:
+      self.state = 1
+      self.consume_left(ctx)
+    else:
+      self.consume_right(ctx)
+      self.state = 0
 
   def consume_left(self, ctx):
     """
@@ -186,8 +197,11 @@ class ThetaJoin(Join):
     Retreive the variable allocated by the left subplan and
     setup context for right subplan
     """
-    # TODO: IMPLEMENT THIS
-    pass
+    self.v_lrow = ctx['row']
+    ctx.pop_vars()
+
+    ctx.request_vars(dict(row=None))
+    self.r.produce(ctx)
 
   def consume_right(self, ctx):
     """
@@ -198,8 +212,23 @@ class ThetaJoin(Join):
 
     Make sure to pass the variable name of output row for the parent operator.
     """
-    # TODO: IMPLEMENT THIS
-    pass
+    v_e = ctx.new_var("theta_cond")
+    self.v_rrow = ctx['row']
+    ctx.pop_vars()
+    nlattrs = len(self.l.schema.attrs)
+    lines = [
+      "%s.row[:%d] = %s.row" % (self.v_irow, nlattrs, self.v_lrow),
+      "%s.row[%d:] = %s.row" % (self.v_irow, nlattrs, self.v_rrow)
+    ]
+    ctx.add_lines(lines)
+
+    ctx.add_line("# ThetaJoin: if %s" % self.cond)
+    ctx.add_io_vars(self.v_irow, v_e)
+    self.cond.compile(ctx) 
+    cond = "if %s:" % v_e
+    with ctx.compiler.indent(cond):
+      ctx['row'] = self.v_irow
+      self.consume_parent(ctx)
 
   def __str__(self):
     return "THETAJOIN(ON %s)" % (str(self.cond))
@@ -586,15 +615,30 @@ class Project(UnaryOp):
     where produce should pretend it is an access method that emits a 
     single empty tuple to its own consume method.
     """
-    # TODO: IMPLEMENT THIS
-    raise Exception("Not implemented")
+    schema_str = self.schema.compile_constructor()
+    self.v_out = ctx.new_var("proj_row")
+    line = "%s = ListTuple(%s)" % (self.v_out, schema_str)
+    ctx.add_line(line)
+
+    if self.c == None:
+      ctx.request_vars(dict(row=self.v_out))
+      self.consume(ctx)
+      return
+
+    ctx.request_vars(dict(row=None))
+    self.c.produce(ctx)
 
   def consume(self, ctx):
-    # TODO: IMPLEMENT THIS
-    # In the consume method, you can use the `self.compile_exprs()`
-    # method defined in `baseops.py` to execute an array of expressions
-    # and retrive the temporary values their results are stored in.
-    raise Exception("Not implemented")
+    self.v_in = ctx['row']
+    ctx.pop_vars()
+
+    ctx.add_io_vars(self.v_in, None)
+    v_exprs = self.compile_exprs(ctx, self.exprs)
+
+    line = "%s.row[:] = [%s]" % (self.v_out, ", ".join(v_exprs))
+    ctx.add_line(line)
+    ctx['row'] = self.v_out
+    self.consume_parent(ctx)
 
   def __str__(self):
     args = ", ".join(["%s AS %s" % (e, a) 
@@ -663,12 +707,38 @@ class OrderBy(UnaryOp):
       yield row
 
   def produce(self, ctx):
-    # TODO: IMPLEMENT THIS
-    raise Exception("Not implemented")
+    self.v_rows = ctx.new_var("ord_rows")
+    self.v_keyf = ctx.new_var("ord_keyf")
+    self.v_irow = ctx.new_var("ord_irow")
+    self.v_schema = ctx.new_var("ord_schema")
+    self.v_ordersort = ctx.new_var("ordersort")
+    ctx.request_vars(dict(row=None))
+
+    asc_args = ", ".join(["%s" % '1' if (e == "asc") else '-1' for (e) in self.ascdescs])
+    schema_str = self.schema.compile_constructor()
+    ctx.add_line("%s = %s" % (self.v_schema, schema_str))
+    ctx.add_line("%s = []" % self.v_rows)
+    ctx.add_line("%s = [%s]" % (self.v_ordersort, asc_args))
+
+    with ctx.compiler.indent("def %s(row):" % self.v_keyf):
+      ctx.add_io_vars("row", None)
+      v_all = self.compile_exprs(ctx, self.order_exprs)
+      ctx.add_line("return OBTuple((%s,), %s)" % (", ".join(v_all), self.v_ordersort))
+
+    self.c.produce(ctx)
+
+    ctx.add_line("%s.sort(key=%s)" % (self.v_rows, self.v_keyf))
+
+    cond = "for %s in %s:" % (self.v_irow, self.v_rows)
+    with ctx.compiler.indent(cond):
+      ctx['row'] = self.v_irow
+      self.consume_parent(ctx)
 
   def consume(self, ctx):
-    # TODO: IMPLEMENT THIS
-    raise Exception("Not implemented")
+    self.v_in = ctx['row']
+    ctx.pop_vars()
+    ctx.add_line("%s.append(ListTuple(%s, list(%s.row)))" % (
+      self.v_rows, self.v_schema, self.v_in))
 
   def __str__(self):
     args = ", ".join(["%s %s" % (e, ad) 
