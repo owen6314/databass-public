@@ -52,10 +52,10 @@ def parse_and_optimize(qstr):
   plan = Yield(plan)
   opt = Optimizer()
   opt.initialize_plan(plan)
-  opt.disambiguate_attrs(plan)
+  opt.disambiguate_op_attrs(plan)
   plan = opt(plan)
   opt.initialize_plan(plan)
-  opt.disambiguate_attrs(plan)
+  opt.disambiguate_op_attrs(plan)
   return plan
 
 if __name__ == "__main__":
